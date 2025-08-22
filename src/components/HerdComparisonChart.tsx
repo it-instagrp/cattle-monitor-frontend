@@ -9,7 +9,7 @@ interface HerdComparisonChartProps {
 export const HerdComparisonChart = ({ cattle }: HerdComparisonChartProps) => {
   const chartData = cattle.map((cow) => ({
     cowId: cow.nodeId.replace('Node ', ''),
-    temperature: cow.temperature,
+    temperature: cow.temp,
     status: cow.status,
   }));
 
@@ -38,7 +38,7 @@ export const HerdComparisonChart = ({ cattle }: HerdComparisonChartProps) => {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 type="number" 
-                domain={[36, 42]}
+                domain={[20, 45]}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}

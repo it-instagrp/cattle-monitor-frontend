@@ -30,7 +30,8 @@ export const HealthTable = ({ cattle }: HealthTableProps) => {
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">Temperature (°C)</TableHead>
                 <TableHead className="font-semibold">Heart Rate (BPM)</TableHead>
-                <TableHead className="font-semibold">SpO₂ (%)</TableHead>
+                <TableHead className="font-semibold">Activity Level</TableHead>
+                <TableHead className="font-semibold">Signal (RSSI)</TableHead>
                 <TableHead className="font-semibold">Last Seen</TableHead>
                 <TableHead className="font-semibold">24h Temp Trend</TableHead>
               </TableRow>
@@ -46,9 +47,10 @@ export const HealthTable = ({ cattle }: HealthTableProps) => {
                   <TableCell>
                     <StatusBadge status={cow.status} />
                   </TableCell>
-                  <TableCell className="font-mono">{cow.temperature.toFixed(1)}</TableCell>
-                  <TableCell className="font-mono">{cow.heartRate}</TableCell>
-                  <TableCell className="font-mono">{cow.spO2}</TableCell>
+                  <TableCell className="font-mono">{cow.temp.toFixed(1)}</TableCell>
+                  <TableCell className="font-mono">{cow.bpm.toFixed(0)}</TableCell>
+                  <TableCell className="font-mono">{cow.activity}</TableCell>
+                  <TableCell className="font-mono text-muted-foreground">{cow.rssi} dBm</TableCell>
                   <TableCell className="text-muted-foreground">{cow.lastSeen}</TableCell>
                   <TableCell>
                     <div className="w-20 h-8">

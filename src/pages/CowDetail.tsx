@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Thermometer, Heart, Activity } from "lucide-react";
 import { getCowById } from "@/data/mockData";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SensorDataCard } from "@/components/SensorDataCard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { useState } from "react";
 
@@ -33,13 +34,12 @@ const CowDetail = () => {
     return {
       temperature: cow.temperatureHistory.slice(-hours),
       heartRate: cow.heartRateHistory.slice(-hours),
-      spO2: cow.spO2History.slice(-hours),
     };
   };
 
-  const { temperature, heartRate, spO2 } = getTimeRangeData();
+  const { temperature, heartRate } = getTimeRangeData();
 
-  // Combine all vital signs for multi-line chart
+  // Combine vital signs for multi-line chart
   const combinedData = temperature.map((temp, index) => ({
     time: new Date(temp.timestamp).toLocaleTimeString('en-US', { 
       hour: '2-digit', 
@@ -48,7 +48,6 @@ const CowDetail = () => {
     }),
     temperature: temp.value,
     heartRate: heartRate[index]?.value || 0,
-    spO2: spO2[index]?.value || 0,
   }));
 
   const GaugeCard = ({ 
@@ -140,35 +139,47 @@ const CowDetail = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Real-Time Gauges */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <GaugeCard
-            title="Temperature"
-            value={cow.temperature}
-            unit="°C"
-            icon={Thermometer}
-            min={36}
-            max={42}
-            normal={[37, 39]}
-          />
-          <GaugeCard
-            title="Heart Rate"
-            value={cow.heartRate}
-            unit=" BPM"
-            icon={Heart}
-            min={50}
-            max={120}
-            normal={[60, 85]}
-          />
-          <GaugeCard
-            title="SpO₂"
-            value={cow.spO2}
-            unit="%"
-            icon={Activity}
-            min={85}
-            max={100}
-            normal={[95, 100]}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+          {/* Real-Time Gauges */}
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <GaugeCard
+              title="Temperature"
+              value={cow.temp}
+              unit="°C"
+              icon={Thermometer}
+              min={20}
+              max={45}
+              normal={[25, 40]}
+            />
+            <GaugeCard
+              title="Heart Rate"
+              value={cow.bpm}
+              unit=" BPM"
+              icon={Heart}
+              min={50}
+              max={120}
+              normal={[60, 85]}
+            />
+            <GaugeCard
+              title="Activity Level"
+              value={cow.activity}
+              unit=""
+              icon={Activity}
+              min={0}
+              max={100}
+              normal={[20, 80]}
+            />
+          </div>
+          
+          {/* Sensor Data Card */}
+          <div className="lg:col-span-1">
+            <SensorDataCard
+              accel={cow.accel}
+              gyro={cow.gyro}
+              rssi={cow.rssi}
+              timestamp={cow.timestamp}
+            />
+          </div>
         </div>
 
         {/* Vital Signs Chart */}
@@ -207,13 +218,15 @@ const CowDetail = () => {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft' }}
                   />
                   <YAxis 
-                    yAxisId="vitals"
+                    yAxisId="bpm"
                     orientation="right"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    label={{ value: 'Heart Rate (BPM)', angle: 90, position: 'insideRight' }}
                   />
                   <Line 
                     yAxisId="temp"
@@ -224,20 +237,12 @@ const CowDetail = () => {
                     name="Temperature (°C)"
                   />
                   <Line 
-                    yAxisId="vitals"
+                    yAxisId="bpm"
                     type="monotone" 
                     dataKey="heartRate" 
                     stroke="hsl(var(--primary))" 
                     strokeWidth={2}
                     name="Heart Rate (BPM)"
-                  />
-                  <Line 
-                    yAxisId="vitals"
-                    type="monotone" 
-                    dataKey="spO2" 
-                    stroke="hsl(var(--status-normal))" 
-                    strokeWidth={2}
-                    name="SpO₂ (%)"
                   />
                 </LineChart>
               </ResponsiveContainer>
