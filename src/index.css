@@ -8,33 +8,49 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Cattle Dashboard Design System */
+    --background: 210 20% 98%;
+    --foreground: 210 15% 23%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 210 15% 23%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 210 15% 23%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Sea Green for healthy status */
+    --primary: 146 38% 35%;
+    --primary-foreground: 0 0% 98%;
+    --primary-glow: 146 45% 45%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Soft gray for cards */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 210 15% 23%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 210 12% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 210 15% 23%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status colors */
+    --status-normal: 146 38% 35%;
+    --status-warning: 45 93% 47%;
+    --status-critical: 354 70% 54%;
+    
+    --destructive: 354 70% 54%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 146 38% 35%;
+
+    /* Custom design tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --shadow-card: 0 2px 8px -1px hsl(var(--foreground) / 0.08);
+    --shadow-hover: 0 4px 16px -4px hsl(var(--foreground) / 0.12);
+    
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
     --radius: 0.5rem;
 
