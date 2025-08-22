@@ -5,15 +5,41 @@ import { ArrowLeft, Thermometer, Heart, Activity } from "lucide-react";
 import { getCowById } from "@/data/data";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SensorDataCard } from "@/components/SensorDataCard";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { useState } from "react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, Tooltip, Legend } from "recharts";
+import { useState, useEffect } from "react";
+import { CattleData } from "@/types/cattle";
 
 const CowDetail = () => {
   const { cowId } = useParams<{ cowId: string }>();
   const navigate = useNavigate();
+  const [cow, setCow] = useState<CattleData | null | undefined>(undefined);
   const [timeRange, setTimeRange] = useState<'6h' | '12h' | '24h'>('24h');
   
-  const cow = cowId ? getCowById(cowId) : null;
+  useEffect(() => {
+    if (!cowId) return;
+
+    // Initial fetch
+    setCow(getCowById(cowId));
+
+    // Set up a timer to poll for updates to this specific cow's data
+    const interval = setInterval(() => {
+        const updatedCow = getCowById(cowId);
+        // Only update state if the timestamp has changed to prevent unnecessary re-renders
+        if (updatedCow && updatedCow.timestamp !== cow?.timestamp) {
+            setCow(updatedCow);
+        }
+    }, 1000); // Check for updates every second
+
+    return () => clearInterval(interval);
+  }, [cowId, cow?.timestamp]); // Rerun effect if the ID changes
+
+  if (cow === undefined) {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+            <p className="text-lg text-muted-foreground">Loading cow data...</p>
+        </div>
+    );
+  }
 
   if (!cow) {
     return (
@@ -218,7 +244,7 @@ const CowDetail = () => {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft' }}
+                    label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
                   />
                   <YAxis 
                     yAxisId="bpm"
@@ -226,8 +252,10 @@ const CowDetail = () => {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    label={{ value: 'Heart Rate (BPM)', angle: 90, position: 'insideRight' }}
+                    label={{ value: 'Heart Rate (BPM)', angle: 90, position: 'insideRight', fill: 'hsl(var(--foreground))' }}
                   />
+                  <Tooltip />
+                  <Legend />
                   <Line 
                     yAxisId="temp"
                     type="monotone" 
@@ -235,6 +263,7 @@ const CowDetail = () => {
                     stroke="hsl(var(--status-critical))" 
                     strokeWidth={2}
                     name="Temperature (°C)"
+                    dot={false}
                   />
                   <Line 
                     yAxisId="bpm"
@@ -243,6 +272,7 @@ const CowDetail = () => {
                     stroke="hsl(var(--primary))" 
                     strokeWidth={2}
                     name="Heart Rate (BPM)"
+                    dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -271,6 +301,7 @@ const CowDetail = () => {
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                   />
+                  <Tooltip />
                   <Bar 
                     dataKey="activity" 
                     fill="hsl(var(--primary))"
