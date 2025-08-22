@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Thermometer, Heart, Activity } from "lucide-react";
-import { getCowById } from "@/data/mockData";
+import { getCowById } from "@/data/data";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SensorDataCard } from "@/components/SensorDataCard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts";

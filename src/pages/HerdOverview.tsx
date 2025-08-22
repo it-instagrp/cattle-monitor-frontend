@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { SummaryCards } from "@/components/SummaryCards";
 import { HealthTable } from "@/components/HealthTable";
 import { HerdComparisonChart } from "@/components/HerdComparisonChart";
-import { mockCattleData, getHerdSummary } from "@/data/mockData";
+import { getAllCattleData, getHerdSummary } from "@/data/data";
 
 const HerdOverview = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -39,9 +39,9 @@ const HerdOverview = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <SummaryCards summary={summary} />
-        <HealthTable cattle={mockCattleData} />
+        <HealthTable cattle={getAllCattleData()} />
         <div className="mt-8">
-          <HerdComparisonChart cattle={mockCattleData} />
+          <HerdComparisonChart cattle={getAllCattleData()} />
         </div>
       </main>
     </div>
