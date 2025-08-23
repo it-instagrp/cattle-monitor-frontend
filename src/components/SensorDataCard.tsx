@@ -23,34 +23,42 @@ export const SensorDataCard = ({ accel, gyro, rssi, timestamp }: SensorDataCardP
 
   const rssiStatus = getRssiStatus(rssi);
 
+  // convert accel g → m/s²
+  const accelToMs2 = (g: number) => g * 9.81;
+
   return (
     <Card className="shadow-[var(--shadow-card)]">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Sensor Data</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        
         {/* Accelerometer */}
         <div>
-          <h4 className="font-medium text-sm text-muted-foreground mb-2">Accelerometer (g)</h4>
+          <h4 className="font-medium text-sm text-muted-foreground mb-2">
+            Accelerometer (m/s²)
+          </h4>
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center p-2 bg-muted/30 rounded">
               <div className="text-xs text-muted-foreground">X</div>
-              <div className="font-mono text-sm">{accel.x.toFixed(2)}</div>
+              <div className="font-mono text-sm">{accelToMs2(accel.x).toFixed(2)}</div>
             </div>
             <div className="text-center p-2 bg-muted/30 rounded">
               <div className="text-xs text-muted-foreground">Y</div>
-              <div className="font-mono text-sm">{accel.y.toFixed(2)}</div>
+              <div className="font-mono text-sm">{accelToMs2(accel.y).toFixed(2)}</div>
             </div>
             <div className="text-center p-2 bg-muted/30 rounded">
               <div className="text-xs text-muted-foreground">Z</div>
-              <div className="font-mono text-sm">{accel.z.toFixed(2)}</div>
+              <div className="font-mono text-sm">{accelToMs2(accel.z).toFixed(2)}</div>
             </div>
           </div>
         </div>
 
         {/* Gyroscope */}
         <div>
-          <h4 className="font-medium text-sm text-muted-foreground mb-2">Gyroscope (°/s)</h4>
+          <h4 className="font-medium text-sm text-muted-foreground mb-2">
+            Gyroscope (°/s)
+          </h4>
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center p-2 bg-muted/30 rounded">
               <div className="text-xs text-muted-foreground">X</div>
