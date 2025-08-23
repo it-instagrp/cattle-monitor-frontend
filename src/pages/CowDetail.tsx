@@ -260,8 +260,8 @@ const CowDetail = () => {
                     yAxisId="temp"
                     type="monotone" 
                     dataKey="temperature" 
-                    stroke="hsl(var(--status-critical))" 
-                    strokeWidth={2}
+                    stroke="hsl(330, 90%, 65%)" 
+                    strokeWidth={3}
                     name="Temperature (°C)"
                     dot={false}
                   />
@@ -269,8 +269,8 @@ const CowDetail = () => {
                     yAxisId="bpm"
                     type="monotone" 
                     dataKey="heartRate" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
+                    stroke="hsla(204, 91%, 52%, 1.00)" 
+                    strokeWidth={3}
                     name="Heart Rate (BPM)"
                     dot={false}
                   />
