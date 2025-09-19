@@ -48,9 +48,16 @@ const HerdOverview = () => {
       <header className="border-b bg-card shadow-[var(--shadow-card)]">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Cattle Health Overview</h1>
-              <p className="text-muted-foreground mt-1">Real-time monitoring dashboard</p>
+            <div className="flex items-center space-x-4">
+              <img
+                src="https://res.cloudinary.com/dfumqck7l/image/upload/v1755595424/insta_logo_yhcocq.png"
+                alt="Instagram Logo"
+                className="w-20"
+              />
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Cattle Health Overview</h1>
+                <p className="text-muted-foreground mt-1">Real-time monitoring dashboard</p>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Current Time</p>
