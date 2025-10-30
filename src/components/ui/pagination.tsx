@@ -28,14 +28,16 @@ PaginationContent.displayName = "PaginationContent"
 
 const PaginationItem = React.forwardRef<
   HTMLLIElement,
-  React.ComponentProps<"li">
+  React.ComponentPropsWithoutRef<"li">
 >(({ className, ...props }, ref) => (
   <li ref={ref} className={cn("", className)} {...props} />
 ))
 PaginationItem.displayName = "PaginationItem"
 
+// MODIFIED: Added 'disabled' to the PaginationLinkProps interface.
 type PaginationLinkProps = {
   isActive?: boolean
+  disabled?: boolean // Added disabled prop
 } & Pick<ButtonProps, "size"> &
   React.ComponentProps<"a">
 
@@ -43,15 +45,21 @@ const PaginationLink = ({
   className,
   isActive,
   size = "icon",
+  disabled, // Destructured disabled prop
   ...props
 }: PaginationLinkProps) => (
   <a
     aria-current={isActive ? "page" : undefined}
+    // MODIFIED: Added aria-disabled and conditional onClick to prevent navigation when disabled.
+    aria-disabled={disabled || undefined}
+    onClick={disabled ? (e) => e.preventDefault() : props.onClick}
     className={cn(
       buttonVariants({
         variant: isActive ? "outline" : "ghost",
         size,
       }),
+      // Since it's an anchor, manually apply disabled styles when the prop is true
+      disabled && "pointer-events-none opacity-50",
       className
     )}
     {...props}
@@ -59,11 +67,15 @@ const PaginationLink = ({
 )
 PaginationLink.displayName = "PaginationLink"
 
-const PaginationPrevious = ({
+const PaginationPrevious = React.forwardRef<
+  HTMLAnchorElement,
+  React.ComponentProps<typeof PaginationLink>
+>(({
   className,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
+}, ref) => (
   <PaginationLink
+    ref={ref}
     aria-label="Go to previous page"
     size="default"
     className={cn("gap-1 pl-2.5", className)}
@@ -72,14 +84,18 @@ const PaginationPrevious = ({
     <ChevronLeft className="h-4 w-4" />
     <span>Previous</span>
   </PaginationLink>
-)
+))
 PaginationPrevious.displayName = "PaginationPrevious"
 
-const PaginationNext = ({
+const PaginationNext = React.forwardRef<
+  HTMLAnchorElement,
+  React.ComponentProps<typeof PaginationLink>
+>(({
   className,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
+}, ref) => (
   <PaginationLink
+    ref={ref}
     aria-label="Go to next page"
     size="default"
     className={cn("gap-1 pr-2.5", className)}
@@ -88,7 +104,7 @@ const PaginationNext = ({
     <span>Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
-)
+))
 PaginationNext.displayName = "PaginationNext"
 
 const PaginationEllipsis = ({

@@ -1,24 +1,107 @@
+// src/pages/HerdOverview.tsx
+
 import { useState, useEffect } from "react";
-import { SummaryCards } from "@/components/SummaryCards";
-import { HealthTable } from "@/components/HealthTable";
-import { HerdComparisonChart } from "@/components/HerdComparisonChart";
-import { getAllCattleData, getHerdSummary } from "@/data/data";
-import { CattleData, HerdSummary } from "@/types/cattle";
+import { SummaryCards } from "@/components/SummaryCards"; 
+import { getOverviewCardsData, getHerdSummary, NodeSummaryCard } from "@/data/data"; 
+import { HerdSummary } from "@/types/cattle";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import { Thermometer, Heart, Activity, Signal } from "lucide-react";
+
+// --- New Component: Node Card ---
+interface NodeCardProps {
+  summary: NodeSummaryCard;
+}
+
+const NodeCard = ({ summary }: NodeCardProps) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    // Navigates to /cow/Node 0000X
+    navigate(`/cow/${summary.nodeId}`);
+  };
+
+  const StatusBadge = ({ status }: { status: 'Normal' | 'Warning' | 'Critical' }) => {
+    const variants = {
+      Normal: "bg-status-normal text-white border-status-normal",
+      Warning: "bg-status-warning text-foreground border-status-warning",
+      Critical: "bg-status-critical text-white border-status-critical"
+    };
+    return (
+      <Badge 
+        className={variants[status]}
+        variant="outline"
+      >
+        {status}
+      </Badge>
+    );
+  };
+
+  return (
+    <Card 
+      className="cursor-pointer shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]"
+      onClick={handleCardClick}
+    >
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg font-bold">{summary.nodeId}</CardTitle>
+        <StatusBadge status={summary.status} />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground mb-2">7-Day Averages</p>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-sm font-medium">
+            <Thermometer className="h-4 w-4 mr-2 text-primary" />
+            Temperature
+          </div>
+          <span className="font-mono font-bold text-base">{summary.avgTemp}°C</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-sm font-medium">
+            <Heart className="h-4 w-4 mr-2 text-primary" />
+            Heart Rate
+          </div>
+          <span className="font-mono font-bold text-base">{summary.avgBpm} BPM</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-sm font-medium">
+            <Activity className="h-4 w-4 mr-2 text-primary" />
+            Activity Level
+          </div>
+          <span className="font-mono font-bold text-base">{summary.avgActivity}</span>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-sm font-medium">
+            <Signal className="h-4 w-4 mr-2 text-primary" />
+            RSSI
+          </div>
+          <span className="font-mono font-bold text-base">{summary.avgRssi} dBm</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+// --- End New Component ---
+
 
 const HerdOverview = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [cattleData, setCattleData] = useState<CattleData[]>([]);
+  const [nodeSummaries, setNodeSummaries] = useState<NodeSummaryCard[]>([]);
   const [herdSummary, setHerdSummary] = useState<HerdSummary | null>(null);
 
   useEffect(() => {
     // Set up a timer to continuously fetch the latest data
     const dataTimer = setInterval(() => {
-      const liveData = getAllCattleData();
-      const liveSummary = getHerdSummary();
+      const liveNodeData = getOverviewCardsData();
+      const liveHerdSummary = getHerdSummary();
 
       // Update the state with the new data, which will cause the component to re-render
-      setCattleData(liveData);
-      setHerdSummary(liveSummary);
+      setNodeSummaries(liveNodeData);
+      setHerdSummary(liveHerdSummary);
     }, 1000); // Check for new data every second
 
     // Timer for the clock
@@ -34,7 +117,7 @@ const HerdOverview = () => {
   }, []);
 
   // Display a loading message until the first data is fetched
-  if (!herdSummary || cattleData.length === 0) {
+  if (!herdSummary || nodeSummaries.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-lg text-muted-foreground">Connecting to live herd data...</p>
@@ -71,10 +154,15 @@ const HerdOverview = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <SummaryCards summary={herdSummary} />
-        <HealthTable cattle={cattleData} />
-        <div className="mt-8">
-          <HerdComparisonChart cattle={cattleData} />
+        {/* Overall Herd Summary Cards (Existing Component) */}
+        <SummaryCards summary={herdSummary} /> 
+
+        {/* Node Overview Cards - Replaces old table/chart */}
+        <h2 className="text-2xl font-bold text-foreground mb-4">Individual Node Status (7-Day Average)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+          {nodeSummaries.map((summary) => (
+            <NodeCard key={summary.nodeId} summary={summary} />
+          ))}
         </div>
       </main>
     </div>

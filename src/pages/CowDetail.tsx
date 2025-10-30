@@ -2,85 +2,204 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Thermometer, Heart, Activity } from "lucide-react";
-import { getCowById } from "@/data/data";
+import { getAggregatedDataForCow, getPaginatedRecordsForCow, DetailRecord, AggregatedCowData } from "@/data/data";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SensorDataCard } from "@/components/SensorDataCard";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, Tooltip, Legend } from "recharts";
-import { useState, useEffect } from "react";
-import { CattleData } from "@/types/cattle";
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, Tooltip, Legend 
+} from "recharts";
+import { 
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+} from "@/components/ui/table";
+import { 
+    Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext 
+} from "@/components/ui/pagination";
+import { useState, useEffect, useCallback } from "react";
+import { AccelData, GyroData } from "@/types/cattle";
+
+type TimeRange = '6h' | '12h' | '24h' | '7d' | '30d';
+
+type CowDetailState = AggregatedCowData;
+
+const PAGE_SIZE = 10;
+
+interface DetailRecordsTableProps {
+    nodeId: string;
+}
+
+const DetailRecordsTable = ({ nodeId }: DetailRecordsTableProps) => {
+    const [records, setRecords] = useState<DetailRecord[]>([]);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+
+    const fetchRecords = useCallback((page: number) => {
+        const { records, total } = getPaginatedRecordsForCow(nodeId, page, PAGE_SIZE);
+        setRecords(records);
+        setTotalRecords(total);
+        setCurrentPage(page);
+    }, [nodeId]);
+
+    useEffect(() => {
+        fetchRecords(1);
+    }, [nodeId, fetchRecords]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchRecords(currentPage); 
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [fetchRecords, currentPage]);
+
+    const handlePrevious = () => {
+        const newPage = Math.max(1, currentPage - 1);
+        if (newPage !== currentPage) {
+            fetchRecords(newPage);
+        }
+    };
+    
+    const handleNext = () => {
+        const newPage = Math.min(totalPages, currentPage + 1);
+        if (newPage !== currentPage) {
+            fetchRecords(newPage);
+        }
+    };
+
+    return (
+        <Card className="shadow-[var(--shadow-card)]">
+            <CardHeader>
+                <CardTitle className="text-xl font-semibold">Node Raw Records History</CardTitle>
+                <div className="text-sm text-muted-foreground">
+                    Displaying individual sensor readings (Page {currentPage} of {totalPages}, Total Records: {totalRecords})
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="font-semibold">Temp (°C)</TableHead>
+                                <TableHead className="font-semibold">BPM</TableHead>
+                                <TableHead className="font-semibold">Activity</TableHead>
+                                <TableHead className="font-semibold">RSSI (dBm)</TableHead>
+                                <TableHead className="font-semibold">Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {records.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                        No historical records available for this node.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                records.map((record, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell className="font-mono">{record.temp.toFixed(1)}</TableCell>
+                                        <TableCell className="font-mono">{record.bpm.toFixed(0)}</TableCell>
+                                        <TableCell className="font-mono">{record.activity}</TableCell>
+                                        <TableCell className="font-mono text-muted-foreground">{record.rssi}</TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={record.status} />
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+                {totalRecords > PAGE_SIZE && (
+                    <div className="flex justify-center mt-4">
+                        <Pagination>
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious onClick={handlePrevious} disabled={currentPage === 1} />
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <span className="text-sm font-medium text-muted-foreground px-4">
+                                        Page {currentPage} of {totalPages}
+                                    </span>
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationNext onClick={handleNext} disabled={currentPage === totalPages} />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
+
 
 const CowDetail = () => {
-  const { cowId } = useParams<{ cowId: string }>();
+  const { cowId: nodeId } = useParams<{ cowId: string }>(); 
   const navigate = useNavigate();
-  const [cow, setCow] = useState<CattleData | null | undefined>(undefined);
-  const [timeRange, setTimeRange] = useState<'6h' | '12h' | '24h' | '7d'>('24h');
+  
+  const [chartTimeRange, setChartTimeRange] = useState<TimeRange>('24h');
+  const [gaugeTimeRange, setGaugeTimeRange] = useState<TimeRange>('7d');
+  
+  const [data, setData] = useState<CowDetailState | undefined | null>(undefined);
+  
+  const [latestRawRecord, setLatestRawRecord] = useState<{ accel: AccelData; gyro: GyroData; rssi: number; timestamp: number; } | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (!nodeId) return;
+
+    const chartData = getAggregatedDataForCow(nodeId, chartTimeRange);
+    const gaugeData = getAggregatedDataForCow(nodeId, gaugeTimeRange);
+
+    const latestRecord = getPaginatedRecordsForCow(nodeId, 1, 1).records[0];
+
+    if (chartData && gaugeData && chartData.lastSeen !== 'N/A' && gaugeData.lastSeen !== 'N/A') {
+        const fullData: CowDetailState = {
+            nodeId: chartData.nodeId,
+            status: chartData.status,
+            lastSeen: chartData.lastSeen,
+            avgTemp: gaugeData.avgTemp, 
+            avgBpm: gaugeData.avgBpm,
+            avgActivity: gaugeData.avgActivity,
+            temperatureHistory: chartData.temperatureHistory,
+            heartRateHistory: chartData.heartRateHistory,
+            activityHistory: chartData.activityHistory,
+        };
+        
+        setData(fullData);
+
+        if (latestRecord) {
+            setLatestRawRecord({
+                accel: latestRecord.accel,
+                gyro: latestRecord.gyro,
+                rssi: latestRecord.rssi,
+                timestamp: latestRecord.timestamp,
+            });
+        }
+    } else {
+        setData(null);
+    }
+  }, [nodeId, chartTimeRange, gaugeTimeRange]);
+
 
   useEffect(() => {
-    if (!cowId) return;
-
-    // Initial fetch
-    setCow(getCowById(cowId));
-
-    // Set up a timer to poll for updates to this specific cow's data
+    fetchData(); 
+    
     const interval = setInterval(() => {
-      const updatedCow = getCowById(cowId);
-      // Only update state if the timestamp has changed to prevent unnecessary re-renders
-      if (updatedCow && updatedCow.timestamp !== cow?.timestamp) {
-        setCow(updatedCow);
-      }
-    }, 1000); // Check for updates every second
+      fetchData();
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [cowId, cow?.timestamp]); // Rerun effect if the ID changes
+  }, [fetchData]);
 
-  if (cow === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-lg text-muted-foreground">Loading cow data...</p>
-      </div>
-    );
+  const getTimeRangeLabel = (range: TimeRange) => {
+      switch(range) {
+          case '7d': return 'Last 7 Days Average';
+          case '30d': return 'Last 30 Days Average';
+          default: return `Last ${range.replace('h', ' Hours')} Average`;
+      }
   }
 
-  if (!cow) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Cow Not Found</h1>
-          <Button onClick={() => navigate('/')} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Herd Overview
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const getTimeRangeData = () => {
-    let hours = 24;
-    if (timeRange === '6h') hours = 6;
-    else if (timeRange === '12h') hours = 12;
-    else if (timeRange === '24h') hours = 24;
-    else if (timeRange === '7d') hours = 168; // 7 days
-
-    return {
-      temperature: cow.temperatureHistory.slice(-hours),
-      heartRate: cow.heartRateHistory.slice(-hours),
-    };
-  };
-
-
-  const { temperature, heartRate } = getTimeRangeData();
-
-  // Combine vital signs for multi-line chart
-  const combinedData = temperature.map((temp, index) => ({
-    time: new Date(temp.timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }),
-    temperature: temp.value,
-    heartRate: heartRate[index]?.value || 0,
-  }));
 
   const GaugeCard = ({
     title,
@@ -89,7 +208,9 @@ const CowDetail = () => {
     icon: Icon,
     min,
     max,
-    type // "temperature" | "bpm" | "activity"
+    type,
+    setGaugeTimeRange,
+    currentGaugeTimeRange,
   }: {
     title: string;
     value: number;
@@ -98,30 +219,27 @@ const CowDetail = () => {
     min: number;
     max: number;
     type: "temperature" | "bpm" | "activity";
+    setGaugeTimeRange: (range: TimeRange) => void;
+    currentGaugeTimeRange: TimeRange;
   }) => {
     const percentage = ((value - min) / (max - min)) * 100;
 
-    // Gauge bar color for the current value
     let barColor = "bg-gray-400";
-
     if (type === "temperature") {
       barColor = (value >= 37.78 && value <= 38.89) ? "bg-green-500" : "bg-red-500";
     }
-
     if (type === "bpm") {
       if (value >= 70 && value <= 80) barColor = "bg-green-500";
       else if (value >= 60 && value < 70) barColor = "bg-yellow-400";
       else if (value > 80 && value <= 90) barColor = "bg-red-400";
       else barColor = "bg-red-600";
     }
-
     if (type === "activity") {
       if (value >= 20 && value <= 80) barColor = "bg-green-500";
       else if (value < 20) barColor = "bg-yellow-400";
       else barColor = "bg-red-500";
     }
 
-    // Legend items based on type
     const legendItems =
       type === "temperature"
         ? [
@@ -150,11 +268,27 @@ const CowDetail = () => {
           </div>
 
           <div className="text-center">
+            <div className="flex justify-center mb-2">
+                <select
+                    value={currentGaugeTimeRange}
+                    onChange={(e) => setGaugeTimeRange(e.target.value as TimeRange)}
+                    className="text-xs text-muted-foreground border rounded-md p-1 bg-background"
+                >
+                    <option value="6h">6 Hours</option>
+                    <option value="12h">12 Hours</option>
+                    <option value="24h">24 Hours</option>
+                    <option value="7d">7 Days</option>
+                    <option value="30d">30 Days</option>
+                </select>
+            </div>
+            <div className="text-sm font-medium text-muted-foreground mb-1">
+                {getTimeRangeLabel(currentGaugeTimeRange)}
+            </div>
+            
             <div className="text-2xl font-bold">
               {value.toFixed(1)}{unit}
             </div>
 
-            {/* Gauge bar */}
             <div className="mt-4 w-full h-3 bg-muted rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${barColor}`}
@@ -162,13 +296,11 @@ const CowDetail = () => {
               />
             </div>
 
-            {/* Min / Max */}
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>{min}</span>
               <span>{max}</span>
             </div>
 
-            {/* Legend */}
             <div className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
               {legendItems.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2">
@@ -184,10 +316,43 @@ const CowDetail = () => {
   };
 
 
+  if (data === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-lg text-muted-foreground">Loading node data...</p>
+      </div>
+    );
+  }
+
+  if (data === null || !nodeId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Cow Not Found</h1>
+          <Button onClick={() => navigate('/')} variant="outline">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Herd Overview
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const combinedChartData = data.temperatureHistory.map((temp: any, index: number) => {
+    const timeFormat: Intl.DateTimeFormatOptions = chartTimeRange.endsWith('d')
+      ? { month: 'short', day: 'numeric' }
+      : { hour: '2-digit', minute: '2-digit', hour12: false };
+
+    return ({
+      time: new Date(temp.timestamp).toLocaleString('en-US', timeFormat),
+      temperature: temp.value,
+      heartRate: data.heartRateHistory[index]?.value || 0,
+    });
+  });
+
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card shadow-[var(--shadow-card)]">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -201,10 +366,9 @@ const CowDetail = () => {
                 Back to Herd Overview
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Details for {cow.nodeId}</h1>
+                <h1 className="text-2xl font-bold text-foreground">Details for {data.nodeId}</h1>
                 <div className="flex items-center gap-2 mt-1">
-                  <StatusBadge status={cow.status} />
-                  <span className="text-muted-foreground">Last seen: {cow.lastSeen}</span>
+                  <StatusBadge status={data.status} />
                 </div>
               </div>
             </div>
@@ -212,67 +376,73 @@ const CowDetail = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-          {/* Real-Time Gauges */}
           <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
             <GaugeCard
               title="Temperature"
-              value={cow.temp}
+              value={data.avgTemp}
               unit="°C"
               icon={Thermometer}
               min={20}
               max={45}
               type="temperature"
+              setGaugeTimeRange={setGaugeTimeRange} 
+              currentGaugeTimeRange={gaugeTimeRange}
             />
 
             <GaugeCard
               title="Heart Rate"
-              value={cow.bpm}
+              value={data.avgBpm}
               unit=" BPM"
               icon={Heart}
               min={50}
               max={120}
               type="bpm"
+              setGaugeTimeRange={setGaugeTimeRange} 
+              currentGaugeTimeRange={gaugeTimeRange}
             />
 
             <GaugeCard
               title="Activity Level"
-              value={cow.activity}
+              value={data.avgActivity}
               unit=""
               icon={Activity}
               min={0}
               max={100}
               type="activity"
+              setGaugeTimeRange={setGaugeTimeRange} 
+              currentGaugeTimeRange={gaugeTimeRange}
             />
           </div>
 
-          {/* Sensor Data Card */}
           <div className="lg:col-span-1">
-            <SensorDataCard
-              accel={cow.accel}
-              gyro={cow.gyro}
-              rssi={cow.rssi}
-              timestamp={cow.timestamp}
-            />
+            {latestRawRecord ? (
+                <SensorDataCard
+                    accel={latestRawRecord.accel}
+                    gyro={latestRawRecord.gyro}
+                    rssi={latestRawRecord.rssi}
+                    timestamp={latestRawRecord.timestamp}
+                />
+            ) : (
+                <Card className="p-6">No sensor data available.</Card>
+            )}
           </div>
         </div>
 
-        {/* Vital Signs Chart */}
         <Card className="shadow-[var(--shadow-card)] mb-8">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold">Vital Signs Trends</CardTitle>
+              <CardTitle className="text-xl font-semibold">Vital Signs Trends ({chartTimeRange} Trend)</CardTitle>
               <div className="flex gap-2">
-                {(['6h', '12h', '24h', '7d'] as const).map((range) => (
+                {(['6h', '12h', '24h', '7d', '30d'] as const).map((range) => (
                   <Button
                     key={range}
-                    variant={timeRange === range ? "default" : "outline"}
+                    variant={chartTimeRange === range ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setTimeRange(range)}
+                    onClick={() => setChartTimeRange(range)}
                   >
-                    {range}
+                    {range.replace('d', ' Days').replace('h', ' Hours')}
                   </Button>
                 ))}
               </div>
@@ -282,13 +452,14 @@ const CowDetail = () => {
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={combinedData}>
+                <LineChart data={combinedChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis
                     dataKey="time"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    interval={chartTimeRange === '7d' ? 24 : chartTimeRange === '30d' ? 72 : 'preserveStartEnd'}
                   />
                   <YAxis
                     yAxisId="temp"
@@ -297,7 +468,7 @@ const CowDetail = () => {
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                     label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
-                    domain={[0, 50]}
+                    domain={[20, 50]}
                   />
                   <YAxis
                     yAxisId="bpm"
@@ -306,7 +477,7 @@ const CowDetail = () => {
                     tickLine={false}
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                     label={{ value: 'Heart Rate (BPM)', angle: 90, position: 'insideRight', fill: 'hsl(var(--foreground))' }}
-                    domain={[0, 100]}
+                    domain={[50, 100]}
                   />
                   <Tooltip />
                   <Legend />
@@ -334,15 +505,14 @@ const CowDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Activity Timeline */}
-        <Card className="shadow-[var(--shadow-card)]">
+        <Card className="shadow-[var(--shadow-card)] mb-8">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Hourly Activity Levels</CardTitle>
+            <CardTitle className="text-xl font-semibold">Hourly Activity Levels ({chartTimeRange} Context)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={cow.activityHistory}>
+                <BarChart data={data.activityHistory}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis
                     dataKey="hour"
@@ -366,6 +536,8 @@ const CowDetail = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <DetailRecordsTable nodeId={data.nodeId} />
       </main>
     </div>
   );

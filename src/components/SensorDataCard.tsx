@@ -85,12 +85,6 @@ export const SensorDataCard = ({ accel, gyro, rssi, timestamp }: SensorDataCardP
             <span className="font-mono text-sm text-muted-foreground">{rssi} dBm</span>
           </div>
         </div>
-
-        {/* Timestamp */}
-        <div className="pt-2 border-t">
-          <div className="text-xs text-muted-foreground">Last Update</div>
-          <div className="font-mono text-sm">{formatTimestamp(timestamp)}</div>
-        </div>
       </CardContent>
     </Card>
   );
