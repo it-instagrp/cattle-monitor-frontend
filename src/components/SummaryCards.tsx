@@ -25,7 +25,7 @@ export const SummaryCards = ({ summary }: SummaryCardsProps) => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Active Alerts</p>
+              <p className="text-sm font-medium text-muted-foreground">Needs Attention</p>
               <p className="text-3xl font-bold text-status-warning">{summary.activeAlerts}</p>
             </div>
             <AlertTriangle className="h-8 w-8 text-status-warning" />

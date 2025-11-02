@@ -12,9 +12,12 @@ const nodes = Array.from({ length: 5 }, (_, i) => `Node ${String(i + 1).padStart
 const baselines = {};
 nodes.forEach((n) => {
   baselines[n] = {
-    bpm: 68 + Math.random() * 8,
-    temp: 38 + Math.random() * 0.7,
-    spo2: 96.8 + Math.random(),
+    // New BPM baseline: 70-80
+    bpm: 73 + Math.random() * 4,
+    // New Temp baseline: 37.78-38.89
+    temp: 38.0 + Math.random() * 0.5,
+    // New SpO2 baseline: 85-90
+    spo2: 86.0 + Math.random() * 3,
     rssi: -100 + Math.random() * 10,
     accel: { x: Math.random() * 0.2 - 0.1, y: Math.random() * 0.2 - 0.1, z: -0.95 },
     gyro: { x: 0.3 + Math.random() * 0.7, y: 0.3 + Math.random() * 0.6, z: 0.8 + Math.random() },
@@ -32,9 +35,15 @@ while (time <= now) {
   nodes.forEach((node) => {
     id++;
     const b = baselines[node];
-    b.bpm = smoothVar(b.bpm, 0.8, 65, 80);
-    b.temp = smoothVar(b.temp, 0.05, 37.8, 39.0);
-    b.spo2 = smoothVar(b.spo2, 0.15, 96.5, 98.0);
+
+    // UPDATED LIMITS: BPM between 70 to 80
+    b.bpm = smoothVar(b.bpm, 0.8, 70, 80);
+    // UPDATED LIMITS: Temperature between 37.78 to 38.89
+    b.temp = smoothVar(b.temp, 0.05, 37.78, 38.89);
+    // UPDATED LIMITS: SpO2 between 85% to 90%
+    b.spo2 = smoothVar(b.spo2, 0.15, 85.0, 90.0);
+
+    // Other parameters remain with original limits
     b.rssi = smoothVar(b.rssi, 2, -110, -85);
     b.accel.x = smoothVar(b.accel.x, 0.05, -0.3, 0.3);
     b.accel.y = smoothVar(b.accel.y, 0.05, -0.3, 0.3);
@@ -66,5 +75,5 @@ while (time <= now) {
 }
 
 // Save to file
-fs.writeFileSync("cattleData_30days.json", JSON.stringify(data, null, 2));
-console.log("✅ File generated: cattleData_30days.json");
+fs.writeFileSync("cattleData_30days_normal.json", JSON.stringify(data, null, 2));
+console.log("✅ File generated: cattleData_30days_normal.json");
